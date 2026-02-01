@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<title>Glow Up RPG</title>
+
+<style>
+body{
+    background:#020617;
+    color:white;
+    font-family:Arial;
+    text-align:center;
+}
+
+.game{
+    max-width:600px;
+    margin:auto;
+}
+
+.card{
+    background:#0f172a;
+    margin:15px;
+    padding:20px;
+    border-radius:20px;
+    box-shadow:0 0 15px rgba(0,255,150,0.2);
+}
+
+.bar{
+    height:20px;
+    background:#1e293b;
+    border-radius:10px;
+    overflow:hidden;
+}
+
+.fill{
+    height:100%;
+    background:#22c55e;
+}
+button{
+    padding:10px 15px;
+    margin:5px;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="game">
+
+<h1>🔥 Glow Up RPG</h1>
+
+<div class="card">
+<h2>Player</h2>
+<p>Level: <span id="level"></span></p>
+<p>XP: <span id="xp"></span></p>
+
+<div class="bar"><div class="fill" id="xpFill"></div></div>
+</div>
+
+<div class="card">
+<h2>Stats</h2>
+
+<p>Energie</p>
+<div class="bar"><div class="fill" id="energyFill"></div></div>
+
+<p>Sănătate</p>
+<div class="bar"><div class="fill" id="healthFill"></div></div>
+
+<p>Disciplină</p>
+<div class="bar"><div class="fill" id="disciplineFill"></div></div>
+
+</div>
+
+<div class="card">
+<h2>Acțiuni Test</h2>
+<button onclick="gainXP(20)">Sport</button>
+<button onclick="gainXP(10)">Mâncare sănătoasă</button>
+<button onclick="gainXP(5)">Apă</button>
+<button onclick="sleep()">Somn</button>
+</div>
+
+</div>
+
+<script>
+
+// ===== PLAYER DATA =====
+let player = JSON.parse(localStorage.getItem("player")) || {
+    level:1,
+    xp:0,
+    energy:80,
+    health:80,
+    discipline:50
+}
+
+// ===== SAVE =====
+function save(){
+    localStorage.setItem("player", JSON.stringify(player))
+}
+
+// ===== UI UPDATE =====
+function updateUI(){
+
+    document.getElementById("level").innerText = player.level
+    document.getElementById("xp").innerText = player.xp
+
+    let xpNeed = player.level * 100
+    document.getElementById("xpFill").style.width = (player.xp/xpNeed*100)+"%"
+
+    document.getElementById("energyFill").style.width = player.energy+"%"
+    document.getElementById("healthFill").style.width = player.health+"%"
+    document.getElementById("disciplineFill").style.width = player.discipline+"%"
+}
+
+// ===== GAME ACTIONS =====
+function gainXP(amount){
+
+    player.xp += amount
+    player.discipline += 1
+    player.energy -= 2
+
+    levelCheck()
+    normalize()
+    save()
+    updateUI()
+}
+
+function sleep(){
+    player.energy += 20
+    player.health += 5
+    gainXP(15)
+}
+
+// ===== LEVEL SYSTEM =====
+function levelCheck(){
+    let need = player.level * 100
+    if(player.xp >= need){
+        player.xp -= need
+        player.level++
+        alert("LEVEL UP 🔥")
+    }
+}
+
+// ===== LIMIT VALUES =====
+function normalize(){
+    player.energy = Math.min(100, Math.max(0, player.energy))
+    player.health = Math.min(100, Math.max(0, player.health))
+    player.discipline = Math.min(100, Math.max(0, player.discipline))
+}
+
+// ===== START =====
+updateUI()
+
+</script>
+
+</body>
+</html>
+<!-- QUEST UI -->
+<div class="card">
+<h2>📜 Misiuni Zilnice</h2>
+<div id="questList"></div>
+</div>
+
+// ===== QUEST SYSTEM =====
+
+let today = new Date().toDateString()
+
+let questData = JSON.parse(localStorage.getItem("quests")) || {
+    date: today,
+    quests: [
+        {id:1, text:"Bea 2L apă", xp:20, done:false},
+        {id:2, text:"Fă sport 30 min", xp:40, done:false},
+        {id:3, text:"Mănâncă sănătos azi", xp:25, done:false},
+        {id:4, text:"Dormit minim 7 ore", xp:30, done:false}
+    ]
+}
+
+// RESET dacă e zi nouă
+if(questData.date !== today){
+    questData.date = today
+    questData.quests.forEach(q => q.done = false)
+    saveQuests()
+}
+
+// SAVE QUESTS
+function saveQuests(){
+    localStorage.setItem("quests", JSON.stringify(questData))
+}
+
+// RENDER QUESTS
+function renderQuests(){
+
+    let html = ""
+
+    questData.quests.forEach(q => {
+
+        html += `
+        <div style="margin:10px">
+            <button onclick="completeQuest(${q.id})" 
+            ${q.done ? "disabled" : ""}>
+            ${q.done ? "✅ " : ""}${q.text} (+${q.xp} XP)
+            </button>
+        </div>
+        `
+    })
+
+    document.getElementById("questList").innerHTML = html
+}
+// COMPLETE QUEST
+function completeQuest(id){
+
+    let quest = questData.quests.find(q => q.id === id)
+    if(!quest || quest.done) return
+
+    quest.done = true
+    gainXP(quest.xp)
+
+    saveQuests()
+    renderQuests()
+}
+
+// START QUEST UI
+renderQuests()
+<div class="card">
+<h2>📅 Progres Zilnic</h2>
+<p>🔥 Streak curent: <span id="streakNow">0</span> zile</p>
+<p>🏆 Best streak: <span id="bestStreak">0</span> zile</p>
+<div id="calendarLog"></div>
+</div>
+
+// ===== STREAK + CALENDAR =====
+
+let streakData = JSON.parse(localStorage.getItem("streakData")) || {
+    lastDay: null,
+    streak: 0,
+    best: 0,
+    history: {}
+}
+
+let todayKey = new Date().toISOString().split("T")[0]
+
+// MARK DAY COMPLETE dacă ai făcut măcar o misiune
+function markTodayComplete(){
+
+    if(streakData.history[todayKey]) return
+
+    streakData.history[todayKey] = true
+
+    if(streakData.lastDay){
+
+        let last = new Date(streakData.lastDay)
+        let todayDate = new Date(todayKey)
+
+        let diff = (todayDate - last)/(1000*60*60*24)
+
+        if(diff <= 1.5){
+            streakData.streak++
+        } else {
+            streakData.streak = 1
+        }
+
+    } else {
+        streakData.streak = 1
+    }
+
+    streakData.lastDay = todayKey
+
+    if(streakData.streak > streakData.best){
+        streakData.best = streakData.streak
+    }
+
+    // BONUS XP streak
+    if(streakData.streak % 7 === 0){
+        gainXP(50)
+        alert("🔥 7 Day Streak Bonus!")
+    }
+
+    saveStreak()
+    updateStreakUI()
+}
+
+// SAVE
+function saveStreak(){
+    localStorage.setItem("streakData", JSON.stringify(streakData))
+}
+
+// UI
+function updateStreakUI(){
+    document.getElementById("streakNow").innerText = streakData.streak
+    document.getElementById("bestStreak").innerText = streakData.best
+    renderCalendarLog()
+}
+
+// CALENDAR LOG
+function renderCalendarLog(){
+
+    let keys = Object.keys(streakData.history).slice(-14)
+    let html = ""
+
+    keys.forEach(day => {
+        html += `<span style="margin:4px">✅</span>`
+    })
+
+    document.getElementById("calendarLog").innerHTML = html
+}
+
+// HOOK QUEST COMPLETE
+let oldCompleteQuest = completeQuest
+completeQuest = function(id){
+    oldCompleteQuest(id)
+    markTodayComplete()
+}
+
+// START
+updateStreakUI()
+<div class="card">
+<h2>🌟 Skill Tree Glow Up</h2>
+
+<p>Skill Points: <span id="skillPoints">0</span></p>
+
+<div id="skillTree"></div>
+
+</div>
+
+// ===== SKILL TREE =====
+
+let skillData = JSON.parse(localStorage.getItem("skillTree")) || {
+    points: 0,
+    skills:{
+        body:0,
+        mind:0,
+        discipline:0,
+        social:0
+    }
+}
+
+// PRIMEȘTI SKILL POINT LA LEVEL UP
+let oldLevelCheck = levelCheck
+levelCheck = function(){
+    let before = player.level
+    oldLevelCheck()
+
+    if(player.level > before){
+        skillData.points += 1
+        saveSkills()
+        updateSkillUI()
+    }
+}
+
+// SAVE
+function saveSkills(){
+    localStorage.setItem("skillTree", JSON.stringify(skillData))
+}
+
+// UPGRADE SKILL
+function upgradeSkill(skill){
+
+    if(skillData.points <= 0) return
+
+    skillData.skills[skill]++
+    skillData.points--
+
+    applySkillBonus(skill)
+
+    saveSkills()
+    updateSkillUI()
+    updateUI()
+}
+
+// BONUSURI
+function applySkillBonus(skill){
+
+    if(skill === "body"){
+        player.health += 2
+    }
+
+    if(skill === "mind"){
+        player.energy += 2
+    }
+
+    if(skill === "discipline"){
+        player.discipline += 3
+    }
+
+    if(skill === "social"){
+        gainXP(10)
+    }
+
+}
+
+// UI
+function updateSkillUI(){
+
+    document.getElementById("skillPoints").innerText = skillData.points
+
+    let html = ""
+
+    Object.keys(skillData.skills).forEach(skill => {
+
+        html += `
+        <div style="margin:10px">
+            <button onclick="upgradeSkill('${skill}')">
+            ${skill.toUpperCase()} Lv.${skillData.skills[skill]}
+            </button>
+        </div>
+        `
+    })
+
+    document.getElementById("skillTree").innerHTML = html
+}
+
+// START
+updateSkillUI()
+<div class="card">
+<h2>🏆 Achievements / Badge Collection</h2>
+<div id="badgeList"></div>
+</div>
+
+// ===== ACHIEVEMENTS / BADGES =====
+
+let badgeData = JSON.parse(localStorage.getItem("badges")) || {
+    unlocked:[]
+}
+
+const badges = [
+    {id:1, name:"First Quest", desc:"Completează prima misiune", check:()=> questData.quests.some(q=>q.done)},
+    {id:2, name:"7 Day Streak", desc:"7 zile consecutive completate", check:()=> streakData.streak >=7},
+    {id:3, name:"30 Day Streak", desc:"30 zile consecutive", check:()=> streakData.streak >=30},
+    {id:4, name:"Level 5 Achiever", desc:"Ajunge la Level 5", check:()=> player.level >=5},
+    {id:5, name:"Hydration Master", desc:"Bea 2L apă timp de 7 zile", check:()=> player.discipline >=20} // exemplu
+]
+
+// CHECK BADGES
+function checkBadges(){
+
+    badges.forEach(badge=>{
+        if(!badgeData.unlocked.includes(badge.id) && badge.check()){
+            badgeData.unlocked.push(badge.id)
+            alert(`🏅 Badge Unlock: ${badge.name}`)
+            gainXP(50)
+        }
+    })
+
+    localStorage.setItem("badges", JSON.stringify(badgeData))
+    renderBadges()
+}
+
+// RENDER BADGES
+function renderBadges(){
+    let html = ""
+
+    badges.forEach(badge=>{
+        html += `<div style="margin:5px">${badgeData.unlocked.includes(badge.id) ? "✅" : "❌"} ${badge.name} - ${badge.desc}</div>`
+    })
+
+    document.getElementById("badgeList").innerHTML = html
+}
+
+// HOOK LA QUEST COMPLETE + LEVEL UP + STREAK
+let oldGainXP = gainXP
+gainXP = function(amount){
+    oldGainXP(amount)
+    checkBadges()
+}
+
+// START
+checkBadges()
+// ===== DAILY ENERGY DECAY =====
+
+function dailyDecay(){
+
+    let todayDate = new Date().toDateString()
+    let lastDecay = localStorage.getItem("lastDecay") || null
+
+    if(lastDecay === todayDate) return // deja aplicat azi
+
+    // Energia scade dacă nu ai făcut questuri azi
+    let questsDoneToday = questData.quests.some(q=>q.done)
+
+    if(!questsDoneToday){
+        player.energy -= 10
+        player.discipline -= 5
+        player.health -= 5
+        alert("⚠ Nu ai completat nici o misiune azi! Stats scad.")
+    } else {
+        // bonus pentru completat misiuni
+        player.energy += 5
+        player.discipline += 2
+    }
+
+    normalize()
+    save()
+    updateUI()
+
+    localStorage.setItem("lastDecay", todayDate)
+}
+
+// RUN DAILY DECAY la încărcarea jocului
+dailyDecay()
+<div class="card">
+<h2>👹 Boss / Weekly Challenges</h2>
+<div id="bossList"></div>
+</div>
+// ===== BOSS / WEEKLY CHALLENGES =====
+
+let bossData = JSON.parse(localStorage.getItem("bossChallenges")) || [
+    {id:1, name:"No Sugar 7 Days", desc:"Nu consuma zahăr 7 zile", rewardXP:100, rewardPoints:2, done:false},
+    {id:2, name:"5 Workouts / Week", desc:"Fă 5 antrenamente săptămânal", rewardXP:150, rewardPoints:3, done:false}
+]
+
+// SAVE
+function saveBoss(){
+    localStorage.setItem("bossChallenges", JSON.stringify(bossData))
+}
+
+// RENDER
+function renderBoss(){
+    let html = ""
+    bossData.forEach(boss=>{
+        html += `<div style="margin:5px">
+        <button onclick="completeBoss(${boss.id})" ${boss.done ? "disabled" : ""}>
+        ${boss.done ? "✅" : ""}${boss.name} - ${boss.desc} (+${boss.rewardXP} XP)
+        </button></div>`
+    })
+    document.getElementById("bossList").innerHTML = html
+}
+
+// COMPLETE BOSS
+function completeBoss(id){
+    let boss = bossData.find(b=>b.id===id)
+    if(!boss || boss.done) return
+
+    boss.done = true
+    gainXP(boss.rewardXP)
+    skillData.points += boss.rewardPoints
+    saveSkills()
+    saveBoss()
+    renderBoss()
+    alert(`🎉 Boss Challenge ${boss.name} complet!`)
+}
+
+// OPTIONAL: Reset weekly (simplificat)
+let todayWeek = new Date().getWeek()
+let lastWeek = localStorage.getItem("lastBossWeek") || null
+if(lastWeek != todayWeek){
+    bossData.forEach(b=>b.done=false)
+    saveBoss()
+    localStorage.setItem("lastBossWeek", todayWeek)
+}
+
+// Helper pentru week number
+Date.prototype.getWeek = function() {
+    let d = new Date(Date.UTC(this.getFullYear(), this.getMonth(), this.getDate()));
+    let dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    let yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+    return Math.ceil((((d - yearStart) / 86400000) + 1)/7)
+}
+
+renderBoss()
+<div class="card">
+<h2>🛒 Shop & Rewards</h2>
+<p>Points: <span id="shopPoints">0</span></p>
+<div id="shopItems"></div>
+</div>
+// ===== SHOP & UNLOCKS =====
+
+let shopData = JSON.parse(localStorage.getItem("shop")) || {
+    points:0,  // folosește skill points sau XP convertit
+    items:[ 
+        {id:1, name:"Glow Bars Verde", cost:2, unlocked:false},
+        {id:2, name:"Glow Bars Albastru", cost:2, unlocked:false},
+        {id:3, name:"Avatar Cool", cost:5, unlocked:false},
+        {id:4, name:"Background Neon", cost:5, unlocked:false}
+    ]
+}
+
+// SAVE
+function saveShop(){
+    localStorage.setItem("shop", JSON.stringify(shopData))
+}
+
+// RENDER
+function renderShop(){
+    document.getElementById("shopPoints").innerText = skillData.points
+    let html = ""
+    shopData.items.forEach(item=>{
+        html += `<div style="margin:5px">
+        <button onclick="buyItem(${item.id})" ${item.unlocked ? "disabled" : ""}>
+        ${item.unlocked ? "✅ " : ""}${item.name} - ${item.cost} SP
+        </button></div>`
+    })
+    document.getElementById("shopItems").innerHTML = html
+}
+
+// BUY ITEM
+function buyItem(id){
+    let item = shopData.items.find(i=>i.id===id)
+    if(!item || item.unlocked) return
+    if(skillData.points < item.cost){
+        alert("❌ Nu ai suficiente skill points")
+        return
+    }
+
+    skillData.points -= item.cost
+    item.unlocked = true
+    saveSkills()
+    saveShop()
+    renderShop()
+    alert(`🎉 Ai deblocat: ${item.name}`)
+}
+
+// START
+renderShop()
+
+
+
+
